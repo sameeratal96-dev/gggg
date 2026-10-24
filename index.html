@@ -646,13 +646,13 @@ function planList(plan,a){
     var deps=t.deps.map(function(d){var j=a.idx[d];return j===undefined?'':esc(plan[j].title)}).filter(Boolean);
     return '<div class="trow k-'+t.kind+' pop" style="animation-delay:'+(i*60)+'ms"><div class="ti"><i></i><input type="text" id="tt-'+t.id+'" data-title="'+i+'" value="'+esc(t.title)+'" aria-label="Task title"></div>'+
     '<div class="ctl"><button class="btn icon" data-act="merge" data-i="'+i+'" title="Merge with next task" aria-label="Merge with next task"'+(i===plan.length-1?' disabled':'')+'>'+ic('merge',16)+'</button><button class="btn icon" data-act="del" data-i="'+i+'" title="Remove task" aria-label="Remove task">'+ic('trash',16)+'</button></div>'+
-    '<div class="meta"><span class="tag">'+KIND[t.kind]+'</span>'+t.skills.map(function(s){return '<span class="sk">'+esc(s)+'</span>'}).join('')+'<span class="rw" title="AI pricing">'+calc[i].base+' + '+calc[i].bonus+'</span><span class="hint">'+esc(calc[i].why)+'</span>'+(deps.length?'<span>after '+deps.join(', ')+'</span>':'<span>can start now</span>')+'</div></div>';
+    '<div class="meta"><span class="tag">'+KIND[t.kind]+'</span>'+t.skills.map(function(s){return '<span class="sk">'+esc(s)+'</span>'}).join('')+'<span class="rw" title="AI pricing">'+calc[i].base+' + '+calc[i].bonus+'</span><span class="hint">'+esc(calc[i].why)+'</span>'+(deps.length?'<span>after '+deps.join(', ')+'</span>':'<span>can start now</span>')+'</div>'+aiDetails(t)+'</div>';
   }).join('');
 }
 function planBody(){
   if(state.shredding)return '<div class="scan"><span class="spin"></span><span id="scanmsg">Reading your brief…</span></div><div class="skel"><i></i><i></i><i></i><i></i><i></i></div>';
   var a=analyse(state.plan);
-  return '<div class="planhead"><div><h2>AI plan</h2><div class="pills"><span class="pill hot">'+state.plan.length+' atomic tasks</span><span class="pill">'+(a.lvl.length?Math.max.apply(null,a.lvl)+1:0)+' levels deep</span><span class="pill">Critical path: '+a.steps+' steps, '+a.total+' builder-hours</span></div></div></div>'+
+  return '<div class="planhead"><div><h2>AI plan</h2><div class="pills"><span class="pill hot">'+state.plan.length+' atomic tasks</span>'+aiPill()+'<span class="pill">'+(a.lvl.length?Math.max.apply(null,a.lvl)+1:0)+' levels deep</span><span class="pill">Critical path: '+a.steps+' steps, '+a.total+' builder-hours</span></div></div></div>'+
   '<div class="gwrap">'+graph(state.plan,a)+'</div><div class="legend"><span><i></i>Critical path</span><span><i class="n"></i>Can run in parallel</span></div>'+
   '<div><h3 style="font-size:16px;margin-bottom:4px">Edit before publishing</h3><p class="hint" style="margin-bottom:10px">Rename, merge or remove tasks. AI sets every reward: Crumb pays the baseline, and the winner prize comes from your balance.</p></div>'+
   '<div class="tlist" id="tlist">'+planList(state.plan,a)+'</div>';
@@ -671,7 +671,7 @@ function pubBtn(){
 function renderUpload(){
   return '<div class="up"><div style="display:flex;flex-direction:column;gap:20px;min-width:0">'+
   '<section class="panel"><div><h2>Your big idea</h2><p class="sub">Type it, paste a brief, or attach a text file.</p></div>'+
-  '<div><label class="lb" for="brief">Project brief</label><textarea id="brief" rows="9" placeholder="Describe what you want built…">'+esc(state.brief)+'</textarea><div class="rowb" style="margin-top:8px"><span class="hint" id="cnt">'+state.brief.length+' characters</span><span style="display:flex;gap:8px"><button class="btn sm" data-act="sample">Use sample brief</button><label class="btn sm" for="file" style="cursor:pointer">'+ic('file',15)+'Attach file</label><input type="file" id="file" accept=".txt,.md" class="sr"></span></div></div>'+
+  '<div><label class="lb" for="brief">Project brief</label><textarea id="brief" rows="9" placeholder="Describe what you want built…">'+esc(state.brief)+'</textarea><div class="rowb" style="margin-top:8px"><span class="hint" id="cnt">'+state.brief.length+' characters</span><span style="display:flex;gap:8px"><button class="btn sm" data-act="sample">Use sample brief</button><button class="btn sm" data-act="sample2">RoboNova brief</button><label class="btn sm" for="file" style="cursor:pointer">'+ic('file',15)+'Attach file</label><input type="file" id="file" accept=".txt,.md" class="sr"></span></div></div>'+
   '<button class="btn primary" data-act="shred" style="padding:13px 16px;font-size:15px">'+ic('scissors',18)+'Shred into micro-tasks</button></section>'+
   '<section class="panel"><div><h2>Rewards and rules</h2><p class="sub">AI sets the money. You set how each bake-off runs.</p></div>'+
   '<div class="field"><span class="lb" style="margin:0">Rewards are set by AI</span><span class="hint">AI prices each task from effort, skill level and its place on the critical path. Crumb pays every builder a baseline. You fund the winner prize. Your balance: '+num(state.coins)+' crumbs.</span></div>'+
@@ -680,17 +680,125 @@ function renderUpload(){
   '<div class="field"><span class="lb" style="margin:0">Sprint length</span>'+segs('sprint',[12,24],'h')+'</div>'+
   '<div id="econ" style="display:flex;flex-direction:column;gap:10px">'+econ()+'</div></section></div>'+
   '<section class="panel" id="plan" aria-live="polite">'+planBody()+'</section></div>'+
-  '<div class="panel" style="margin-top:20px;flex-direction:row;align-items:center;justify-content:space-between;flex-wrap:wrap"><div><b style="font-family:var(--f-disp);font-size:17px">Ready to launch?</b><p class="hint">Preview data is mocked for the sample brief.</p></div><div id="pubwrap">'+pubBtn()+'</div></div>';
+  '<div class="panel" style="margin-top:20px;flex-direction:row;align-items:center;justify-content:space-between;flex-wrap:wrap"><div><b style="font-family:var(--f-disp);font-size:17px">Ready to launch?</b><p class="hint">Shredding and submission checks are done by live AI agents.</p></div><div id="pubwrap">'+pubBtn()+'</div></div>';
 }
 function refreshPlan(){var p=$('#plan');if(p)p.innerHTML=planBody();var w=$('#pubwrap');if(w)w.innerHTML=pubBtn()}
 function refreshEcon(){var e=$('#econ');if(e)e.innerHTML=econ();var l=$('#tlist');if(l&&!state.shredding){l.innerHTML=planList(state.plan,analyse(state.plan)).replace(/ pop"/g,'"')}var w=$('#pubwrap');if(w)w.innerHTML=pubBtn()}
-function shred(){
-  if(state.shredding)return;state.shredding=true;state.published=false;
-  state.plan=PLAN0.map(function(t){return Object.assign({},t,{deps:t.deps.slice()})});
+/* ===== REAL AI PIPELINE: the browser talks to /api/ai, the server holds the key ===== */
+var COINS_PER_WEIGHT=10;           // coins = difficulty x hours x 10 (from the team's price check)
+var AI_TIMEOUT=100000;             // ms to wait for one AI call before using the saved fallback
+var DEMO=/[?&]demo=1/.test(location.search);   // add ?demo=1 to the URL to skip live AI completely
+async function callAI(agent,input){
+  var ctl=new AbortController(),to=setTimeout(function(){ctl.abort()},AI_TIMEOUT);
+  try{
+    var r=await fetch('/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({agent:agent,input:input}),signal:ctl.signal});
+    var j;try{j=await r.json()}catch(e){throw new Error('AI server not reachable (status '+r.status+')')}
+    if(!j.ok)throw new Error(j.error||'AI call failed');
+    return j.data;
+  }finally{clearTimeout(to)}
+}
+var SK_KIND={'UI Design':'design','Frontend':'frontend','Backend':'backend','Database':'backend','Copywriting':'copy','Testing':'qa','DevOps':'backend','Data/AI':'backend','Other':'frontend'};
+var SK_NODE={'UI Design':'UI Design','Frontend':'React','Backend':'REST APIs','Database':'Databases','Copywriting':'Copywriting','Testing':'Testing','DevOps':'Scaling','Data/AI':'REST APIs','Other':'HTML & CSS'};
+function sanitizePlan(tasks){
+  var ids={};
+  tasks=(tasks||[]).slice(0,12).filter(function(t){return t&&t.id&&!ids[t.id]&&(ids[t.id]=1)});
+  tasks.forEach(function(t){t.depends_on=(Array.isArray(t.depends_on)?t.depends_on:[]).filter(function(d){return d!==t.id&&ids[d]})});
+  var out=[],done={},guard=0;
+  while(out.length<tasks.length&&guard++<60){
+    var prog=false;
+    tasks.forEach(function(t){if(done[t.id])return;if(t.depends_on.every(function(d){return done[d]})){out.push(t);done[t.id]=1;prog=true}});
+    if(!prog)tasks.forEach(function(t){if(!done[t.id])t.depends_on=t.depends_on.filter(function(d){return done[d]})});   // break any cycle
+  }
+  return out;
+}
+function genericCriteria(t){
+  var out=(t.deliverables||[]).slice(0,3).map(function(d){return 'The submission includes: '+d});
+  out.push('The submission clearly addresses: '+(t.title||'the task'));
+  return out.slice(0,5);
+}
+function buildPlan(tasks,crit,diff){
+  var cm={},dm={};
+  (crit||[]).forEach(function(c){cm[c.id]=c.acceptance_criteria});
+  (diff||[]).forEach(function(d){dm[d.id]=d});
+  return tasks.map(function(t){
+    var d=dm[t.id]||{},df=Math.min(5,Math.max(1,Math.round(+d.difficulty)||2)),h=Math.min(6,Math.max(1,Math.round(+d.estimated_hours)||3));
+    return {id:t.id,title:String(t.title||'Untitled task'),kind:SK_KIND[t.skill]||'frontend',skills:[SK_NODE[t.skill]||'HTML & CSS'],eff:h,w:df*h,deps:(t.depends_on||[]).slice(),
+      desc:t.description||'',context:t.context||'',deliverables:t.deliverables||[],questions:t.open_questions||[],
+      criteria:(cm[t.id]&&cm[t.id].length)?cm[t.id]:genericCriteria(t),difficulty:df,why:d.why||'',skillLabel:t.skill||'Other',ai:true};
+  });
+}
+function shortDesc(t){
+  var s=(t.desc||'').trim();if(!s)return 'Posted from your brief. '+KIND[t.kind]+' work, about '+t.eff+' builder-hours.';
+  var m=/^.{20,170}?[.!?](\s|$)/.exec(s);return m?m[0].trim():(s.length>170?s.slice(0,167)+'…':s);
+}
+function aiPill(){
+  if(state.aiSrc==='live')return '<span class="pill hot">Live AI'+(state.issues?' · Critic made '+state.issues+' fixes':'')+'</span>';
+  if(state.aiSrc==='saved')return '<span class="pill">Saved plan (AI was busy)</span>';
+  return '';
+}
+function aiDetails(t){
+  if(!t.ai)return '';
+  var li=function(a){return (a||[]).map(function(x){return '<li>'+esc(x)+'</li>'}).join('')};
+  return '<details style="grid-column:1/-1;font-size:13px;color:var(--ink2)"><summary style="cursor:pointer;font-weight:600">Details, acceptance criteria and open questions</summary>'+
+    '<p style="margin:8px 0">'+esc(t.desc)+'</p>'+
+    (t.context?'<p class="hint"><b>From your brief:</b> '+esc(t.context)+'</p>':'')+
+    '<b>Acceptance criteria</b><ul style="margin:4px 0 8px 18px;padding:0">'+li(t.criteria)+'</ul>'+
+    ((t.deliverables||[]).length?'<b>Deliverables</b><ul style="margin:4px 0 8px 18px;padding:0">'+li(t.deliverables)+'</ul>':'')+
+    ((t.questions||[]).length?'<b>Open questions for you</b><ul style="margin:4px 0 8px 18px;padding:0">'+li(t.questions)+'</ul>':'')+'</details>';
+}
+/* saved plan for the RoboNova demo brief, used only when live AI fails */
+var ROBONOVA_BRIEF='I want a website for my college robotics club, called "RoboNova". Students should see upcoming events on the home page as cards. Each card shows the event name, date, time, venue and a short description. Our brand colours are dark blue (#0B1F3A) and orange (#FF7A00), and the look should feel modern and techy. Students register for an event with their name, college email (must end with @iitr.ac.in), branch and year of study. Each event has a seat limit, and when it is full the register button must change to "Event Full". I should log in as admin with a password and see the list of registered students for each event, and I want to download that list as a CSV file. Registered students should get a confirmation email. We expect about 300 students.';
+function rn(id,title,skill,dep,desc,ctx,del,crit,df,h,why,q){return {t:{id:id,title:title,skill:skill,depends_on:dep,description:desc,context:ctx,deliverables:del,open_questions:q||[]},c:{id:id,acceptance_criteria:crit},d:{id:id,difficulty:df,estimated_hours:h,why:why}}}
+var ROBONOVA_RAW=[
+rn('T1','Brand look and UI kit','UI Design',[],'Design the visual style for the RoboNova site using the club colours. Create the event card, buttons, form fields and the admin table so every page looks consistent. The look should feel modern and techy so students recognise the club at a glance.','Dark blue #0B1F3A and orange #FF7A00. Modern and techy look.',['Design file or screenshots of the style guide','Event card design','Button and form field designs'],['The design uses dark blue #0B1F3A and orange #FF7A00 as the main colours.','An event card design is shown with name, date, time, venue and short description.','Normal and disabled button styles are shown, including one labelled Event Full.','The style looks modern and techy, shown in at least one full-page screenshot.'],2,3,'Small design set with fixed colours.'),
+rn('T2','Home page with event cards','Frontend',['T1'],'Build the home page that lists upcoming events as cards using the agreed style. Each card shows the event name, date, time, venue and a short description plus a register button. The page must work on phones and laptops.','Cards show event name, date, time, venue, short description. Register button changes to Event Full when seats run out.',['Working home page','Screenshot on phone and laptop width'],['Every event card shows name, date, time, venue and short description.','Cards follow the brand colours and the UI kit.','The register button shows Event Full when an event has no seats left, proven by a screenshot.','Layout is readable on phone and laptop widths, proven by screenshots.'],3,4,'Responsive layout plus seat-state button.'),
+rn('T3','Registration form with email check','Frontend',['T1'],'Build the form students use to register for an event. It asks for name, college email, branch and year of study. The email must end with @iitr.ac.in and the form must show a clear error otherwise.','Fields: name, college email (must end with @iitr.ac.in), branch, year of study.',['Working registration form','Screenshot of a rejected non-college email'],['The form has fields for name, college email, branch and year of study.','An email not ending with @iitr.ac.in is rejected with a clear message, shown in a screenshot.','A valid college email is accepted, shown in a screenshot.','Empty fields show a helpful message instead of submitting.'],3,3,'Form with one validation rule.'),
+rn('T4','Database for events and registrations','Database',[],'Set up where events and student registrations are stored. Events need name, date, time, venue, description and seat limit. Registrations link a student to an event and must prevent the same student registering twice for one event.','Event fields: name, date, time, venue, short description, seat limit. Student fields: name, email, branch, year. About 300 students.',['Data structure description or diagram','Sample data for three events'],['Events store name, date, time, venue, description and seat limit.','Registrations store name, college email, branch and year of study linked to an event.','The design stops the same email registering twice for the same event.','Sample data for at least three events is included.'],2,3,'Simple two-table design.'),
+rn('T5','Seat limit and Event Full logic','Backend',['T4'],'Build the rule that counts registrations for each event and refuses new ones once the seat limit is reached. The home page needs to know whether an event is full so the register button can change. Two students registering at the same moment must not exceed the limit.','Each event has a seat limit. When full the button must show Event Full.',['Working registration handling','Proof that the last seat works and the next attempt is refused'],['A registration is saved when seats remain.','Once the seat limit is reached further registrations are refused with a clear message, shown by a recording or log.','The event data tells the home page when an event is full.','Two registrations for the last seat do not both succeed, shown by a log.'],3,4,'Needs care with the last seat.'),
+rn('T6','Admin password login','Backend',['T4'],'Create the admin login that is protected by a password. Only a logged-in admin can see registered students and download the list. Wrong passwords must be rejected and the password must not be visible in the page code.','Admin logs in with a password.',['Working admin login','Screenshots of successful and failed login'],['The admin pages ask for a password before showing anything.','A wrong password is rejected with a clear message, shown in a screenshot.','A correct password opens the admin area, shown in a screenshot.','The password is not visible in the page source.'],3,3,'Basic protected login.'),
+rn('T7','Admin list and CSV download','Frontend',['T5','T6'],'Build the admin screen that shows registered students for each event. Add a button that downloads the selected event list as a CSV file. The file must open correctly in a spreadsheet.','Admin sees registered students per event and downloads a CSV.',['Admin page','Sample downloaded CSV'],['The admin can choose an event and see its registered students.','A download button saves a CSV file with name, email, branch and year columns.','The sample CSV opens in a spreadsheet with correct columns.','Only a logged-in admin can reach this page.'],2,3,'Table plus file export.'),
+rn('T8','Confirmation email','Backend',['T5'],'Send each student an email as soon as their registration is saved. The email names the event with its date, time and venue. If sending fails the registration must still stay saved.','Registered students get a confirmation email. Expected about 300 students.',['Working email sending','Screenshot of a received email'],['A confirmation email is sent after a successful registration, shown by a screenshot.','The email names the event, date, time and venue.','A failed email does not delete the registration, shown by a log.','The sender and subject clearly show it is from RoboNova.'],3,3,'Depends on an email service.',['Which email service should be used?']),
+rn('T9','End-to-end testing','Testing',['T2','T3','T7','T8'],'Test the full journey from seeing an event to getting the confirmation email and the admin CSV. Include the Event Full case and a wrong email. Report any bugs found with steps to repeat them.','About 300 students. Email must end with @iitr.ac.in. Event Full state.',['Test report','Screenshots or recording of the main journey'],['The report covers register, Event Full, wrong email, admin login and CSV download.','Each test lists steps and the result.','Any bug found has steps to repeat it.','A recording or screenshots show the main journey working.'],2,3,'Checklist style testing.')
+];
+function fallbackPlan(brief){
+  if(/robonova/i.test(brief||'')){
+    var tasks=sanitizePlan(ROBONOVA_RAW.map(function(x){return JSON.parse(JSON.stringify(x.t))}));
+    return buildPlan(tasks,ROBONOVA_RAW.map(function(x){return x.c}),ROBONOVA_RAW.map(function(x){return x.d}));
+  }
+  return PLAN0.map(function(t){return Object.assign({},t,{deps:t.deps.slice()})});
+}
+window.__crumbState=function(){return state};
+async function shred(){
+  if(state.shredding)return;
+  var brief=(state.brief||'').trim();
+  if(brief.length<30)return toast('Write a few more sentences about your project first');
+  state.shredding=true;state.published=false;state.issues=0;state.aiSrc='';
   refreshPlan();
-  var msgs=['Reading your brief…','Finding the atomic pieces…','Mapping dependencies…','Estimating rewards…'],i=0;
-  var iv=setInterval(function(){i++;var m=$('#scanmsg');if(m&&msgs[i])m.textContent=msgs[i]},450);
-  setTimeout(function(){clearInterval(iv);state.shredding=false;refreshPlan();toast('Brief shredded into '+state.plan.length+' tasks')},1900);
+  var say=function(m){var e=$('#scanmsg');if(e)e.textContent=m};
+  try{
+    if(DEMO)throw new Error('demo mode');
+    say('Planner is breaking your brief into tasks…');
+    var p=await callAI('planner',brief),tasks=(p&&p.tasks)||[];
+    if(!tasks.length)throw new Error('Planner returned no tasks');
+    say('Critic is reviewing the plan…');
+    var issues=[];
+    try{
+      var c=await callAI('critic','ORIGINAL BRIEF:\n'+brief+'\n\nPLAN:\n'+JSON.stringify({tasks:tasks}));
+      if(c&&Array.isArray(c.tasks)&&c.tasks.length){tasks=c.tasks;issues=c.issues_found||[]}
+    }catch(e){console.warn('Critic skipped',e)}
+    tasks=sanitizePlan(tasks);
+    if(!tasks.length)throw new Error('No valid tasks');
+    say('Writing acceptance criteria and scoring difficulty…');
+    var slim=JSON.stringify(tasks.map(function(t){return {id:t.id,title:t.title,description:t.description,context:t.context,deliverables:t.deliverables,skill:t.skill}}));
+    var res=await Promise.all([callAI('criteria',slim).catch(function(){return null}),callAI('difficulty',slim).catch(function(){return null})]);
+    state.plan=buildPlan(tasks,res[0]&&res[0].criteria,res[1]&&res[1].difficulty);
+    state.issues=issues.length;state.issueList=issues;state.aiSrc='live';
+  }catch(e){
+    console.warn('AI pipeline failed, using saved plan:',e&&e.message);
+    state.plan=fallbackPlan(brief);state.aiSrc='saved';
+  }
+  state.shredding=false;refreshPlan();
+  toast(state.aiSrc==='live'?'AI shredded your brief into '+state.plan.length+' tasks':'AI was busy, so a saved plan was loaded. You can keep going.');
 }
 
 /* profile */
@@ -747,23 +855,79 @@ function closeModal(){$('#modal').innerHTML=''}
 function scoreSvg(p){var C=2*Math.PI*28;return '<div class="score"><svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="28" fill="none" stroke="var(--line2)" stroke-width="6"/><circle cx="32" cy="32" r="28" fill="none" stroke="var(--ok)" stroke-width="6" stroke-linecap="round" stroke-dasharray="'+(C*p/100).toFixed(1)+' '+C.toFixed(1)+'"/></svg><b>'+p+'%</b></div>'}
 function findTask(id){return TASKS.filter(function(t){return t.id===id})[0]}
 function submitModal(id){
-  var t=findTask(id);
-  openModal('<h3>Submit your work</h3><p class="hint">'+esc(t.title)+' · '+esc(t.project)+'</p><div><label class="lb" for="subTxt">Paste your solution, a link, or a short write-up</label><textarea id="subTxt" rows="6" placeholder="Describe your approach and include your result…"></textarea><p class="hint" style="margin-top:6px">Try typing &quot;asdf&quot; to see what the spam filter does.</p></div><div id="subRes"></div><div class="macts"><button class="btn" data-act="close">Close</button><button class="btn primary" data-act="runcheck" data-id="'+id+'">Run AI check</button></div>');
+  var t=findTask(id),li=function(a){return (a||[]).map(function(x){return '<li>'+esc(x)+'</li>'}).join('')};
+  var info=(t.full||(t.criteria&&t.criteria.length))?'<details style="margin:6px 0 10px;font-size:13px"><summary style="cursor:pointer;font-weight:600">What the checker looks for</summary>'+(t.full?'<p style="margin:6px 0">'+esc(t.full)+'</p>':'')+(t.criteria&&t.criteria.length?'<ul style="margin:4px 0 4px 18px;padding:0">'+li(t.criteria)+'</ul>':'')+(t.deliverables&&t.deliverables.length?'<b>Deliverables</b><ul style="margin:4px 0 4px 18px;padding:0">'+li(t.deliverables)+'</ul>':'')+'</details>':'';
+  openModal('<h3>Submit your work</h3><p class="hint">'+esc(t.title)+' · '+esc(t.project)+'</p>'+info+'<div><label class="lb" for="subTxt">Paste your solution, a link, or a short write-up</label><textarea id="subTxt" rows="6" placeholder="Describe your approach and include your result…"></textarea><p class="hint" style="margin-top:6px">Try junk like &quot;asdf qwer buy cheap watches now&quot; to see the spam penalty, or write a real answer to see the AI feedback.</p></div><div id="subRes"></div><div class="macts"><button class="btn" data-act="close">Close</button><button class="btn primary" data-act="runcheck" data-id="'+id+'">Run AI check</button></div>');
 }
-function runCheck(id){
-  var t=findTask(id),txt=($('#subTxt').value||'').trim(),box=$('#subRes');
-  box.innerHTML='<div class="scan"><span class="spin"></span>Checking relevance, effort and originality…</div>';
-  setTimeout(function(){
-    if(txt.length<25){
-      state.coins=Math.max(0,state.coins-10);state.rep=Math.max(0,state.rep-3);updateChips();
-      box.innerHTML='<div class="res bad"><span style="color:var(--bad)">'+ic('x',30)+'</span><div><h4>Discarded as low-effort</h4><p>-10 crumbs and -3 reputation. Share a real attempt: explain your approach or include a link.</p></div></div>';
-    }else{
-      var sc=78+txt.length%18;state.coins+=t.base;state.completed++;state.submitted[id]=1;state.subs[id]={text:txt,score:sc,at:Date.now()};updateChips();notify({type:'ok',title:'Submission received',body:'"'+t.title+'" passed the AI check at '+sc+'%. '+t.base+' baseline crumbs were paid.',view:'work'});scheduleReview(t);
-      box.innerHTML='<div class="res good">'+scoreSvg(sc)+'<div><h4>Passed the spam filter · '+sc+'% match</h4><p><b>What worked:</b> clear and on-brief. <b>Next time:</b> add one concrete example and cover an edge case.</p><p>+'+t.base+' baseline crumbs paid by Crumb. The owner picks the winner when the timer ends, and the winner takes the prize.</p></div></div>';
-      var go=$('.macts .primary');if(go){go.outerHTML='<button class="btn primary" data-act="close">Done</button>'}
-      render();
-    }
-  },1000);
+/* ===== SUBMISSION CHECK: rules in code, then Spam Guard, Verifier, Judge ===== */
+function ruleCheck(text,o){
+  var s=(text||'').trim(),hasLink=/https?:\/\//i.test(s);
+  if(!s)return {ok:false,review:false,msg:'Please add your work before submitting.'};
+  if(s.length<20&&!hasLink)return {ok:false,review:false,msg:'Your submission is too short. Please add more detail.'};
+  if(o.requiresLink&&!hasLink)return {ok:false,review:false,msg:'This task needs a link. Please add one.'};
+  var dup=(o.earlier||[]).some(function(e){return String(e).trim().toLowerCase()===s.toLowerCase()});
+  if(dup)return {ok:true,review:true,msg:'Identical to an earlier submission. The owner should review it.'};
+  return {ok:true,review:false,msg:'Passed rule checks.'};
+}
+function taskText(t){return 'TITLE: '+t.title+'\nSKILL: '+((t.skills||[]).map(function(s){return s.n||s}).join(', '))+'\nDESCRIPTION: '+(t.full||t.desc||'')+(t.context?'\nCONTEXT FROM BRIEF: '+t.context:'')}
+async function ensureCriteria(t){
+  if(t.criteria&&t.criteria.length)return t.criteria;
+  try{
+    var r=await callAI('criteria',JSON.stringify([{id:'T1',title:t.title,description:t.full||t.desc,context:t.context||'',deliverables:t.deliverables||[]}]));
+    var c=r&&r.criteria&&r.criteria[0]&&r.criteria[0].acceptance_criteria;
+    if(c&&c.length){t.criteria=c;return c}
+  }catch(e){console.warn('criteria fallback',e&&e.message)}
+  t.criteria=['The submission directly addresses: '+t.title,'The submission shows the finished work, or links to it','The submission explains the approach or key decisions'];
+  return t.criteria;
+}
+function resBad(title,body){return '<div class="res bad"><span style="color:var(--bad)">'+ic('x',30)+'</span><div><h4>'+esc(title)+'</h4><p>'+body+'</p></div></div>'}
+function spamPenalty(box,why){
+  state.coins=Math.max(0,state.coins-10);state.rep=Math.max(0,state.rep-3);updateChips();
+  box.innerHTML=resBad('Discarded as spam','-10 crumbs and -3 reputation. '+esc(why||'This did not look like a real attempt.')+' Share a real attempt: explain your approach or include a link.');
+}
+function recordPass(t,id,txt,sc,extra){
+  state.coins+=t.base;state.completed++;state.submitted[id]=1;
+  state.subs[id]=Object.assign({text:txt,score:sc,at:Date.now()},extra||{});
+  updateChips();
+  notify({type:'ok',title:'Submission received','body':'"'+t.title+'" was checked by AI at '+sc+'%. '+t.base+' baseline crumbs were paid.',view:'work'});
+  scheduleReview(t);
+}
+async function runCheck(id){
+  var t=findTask(id),txt=($('#subTxt').value||'').trim(),box=$('#subRes'),btn=$('.macts .primary');
+  var rc=ruleCheck(txt,{requiresLink:!!t.requiresLink,earlier:state.subs[id]?[state.subs[id].text]:[]});
+  if(!rc.ok){box.innerHTML=resBad('Not submitted yet',esc(rc.msg)+' No penalty for this.');return}
+  if(btn)btn.disabled=true;
+  var say=function(m){box.innerHTML='<div class="scan"><span class="spin"></span>'+esc(m)+'</div>'};
+  say('Spam Guard is checking your submission…');
+  try{
+    if(DEMO)throw new Error('demo mode');
+    var tt=taskText(t),crit=await ensureCriteria(t);
+    var spam=await callAI('spam','TASK:\n'+tt+'\n\nSUBMISSION:\n'+txt);
+    if(spam.verdict==='spam'){spamPenalty(box,spam.why);if(btn)btn.disabled=false;return}
+    say('Verifier is checking each acceptance criterion…');
+    var ver=await callAI('verifier','TASK:\n'+tt+'\n\nACCEPTANCE CRITERIA:\n'+crit.map(function(c,i){return (i+1)+'. '+c}).join('\n')+'\n\nSUBMISSION:\n'+txt);
+    say('Judge is scoring your work…');
+    var jd=await callAI('judge','TASK:\n'+tt+'\n\nSPAM GUARD RESULT:\n'+JSON.stringify(spam)+'\n\nVERIFIER RESULTS:\n'+JSON.stringify(ver));
+    var sc=Math.max(0,Math.min(100,Math.round(+jd.score||0)));
+    var review=rc.review||jd.recommendation==='needs_review'||jd.needs_human_review;
+    recordPass(t,id,txt,sc,{feedback:jd.feedback,missing:jd.missing,rec:jd.recommendation,review:review,skillPoints:jd.skill_points});
+    var title=jd.recommendation==='suggest_accept'?'Looks ready to accept':jd.recommendation==='suggest_changes'?'A real attempt, needs changes':'Sent to the owner for review';
+    var rows=(ver.results||[]).map(function(r,i){var ok=r.result==='pass',un=r.result==='unclear';
+      return '<li style="margin:3px 0"><span style="color:var(--'+(ok?'ok':un?'ink3':'bad')+')">'+(ok?'✓':un?'?':'✗')+'</span> '+esc(crit[(r.criterion_number||i+1)-1]||'')+'</li>'}).join('');
+    box.innerHTML='<div class="res good">'+scoreSvg(sc)+'<div><h4>'+esc(title)+' · '+sc+'%</h4><p>'+esc(jd.feedback||'')+'</p>'+
+      ((jd.missing||[]).length?'<p><b>To fix:</b> '+(jd.missing||[]).map(esc).join('; ')+'</p>':'')+
+      (review?'<p class="hint">'+esc(rc.review?rc.msg:(jd.review_reason||'A human should look at this one.'))+'</p>':'')+
+      '<ul style="list-style:none;margin:8px 0 0;padding:0;font-size:13px">'+rows+'</ul>'+
+      '<p style="margin-top:8px">+'+t.base+' baseline crumbs paid by Crumb. The AI only proposes; the owner makes the final call and picks the winner.</p></div></div>';
+  }catch(e){
+    console.warn('AI check unavailable, offline estimate:',e&&e.message);
+    if(txt.length<25&&!/https?:\/\//i.test(txt)){spamPenalty(box,'It looks very low effort.');if(btn)btn.disabled=false;return}
+    var sc2=78+txt.length%18;
+    recordPass(t,id,txt,sc2,{feedback:'Offline estimate. The owner will review this by hand.',review:true});
+    box.innerHTML='<div class="res good">'+scoreSvg(sc2)+'<div><h4>Submitted · '+sc2+'% estimate</h4><p>The AI reviewer was busy, so this is an offline estimate and the owner will review your work by hand.</p><p>+'+t.base+' baseline crumbs paid by Crumb.</p></div></div>';
+  }
+  var go=$('.macts .primary');if(go){go.outerHTML='<button class="btn primary" data-act="close">Done</button>'}
+  render();
 }
 function questModal(){
   openModal('<h3>Fix this syntax error</h3><p class="hint">Proving Grounds · graded automatically</p><textarea id="qcode" class="code" rows="5" spellcheck="false">function add(a, b) {\n  return a + b\n</textarea><div id="qres"></div><div class="macts"><button class="btn" data-act="close">Close</button><button class="btn primary" data-act="qgrade">Grade with AI</button></div>');
@@ -788,6 +952,7 @@ function planCalc(){
   var a=analyse(state.plan);
   return state.plan.map(function(t,i){
     var sk=(t.skills||[]).length,un=state.plan.filter(function(x){return x.deps.indexOf(t.id)>-1}).length,cr=!!a.crit[i];
+    if(t.difficulty){var b0=t.difficulty*t.eff*COINS_PER_WEIGHT;return {base:b0,prize:b0,bonus:b0,why:'Difficulty '+t.difficulty+'/5, '+t.eff+'h'+(t.why?'. '+t.why:'')+(un?' · unblocks '+un:'')+(cr?' · critical path':'')}}
     var base=Math.max(4,Math.round(t.eff*1.6+sk*2+(cr?3:0))),prize=Math.round((t.eff*7+sk*6+un*6+(cr?25:0))/5)*5;
     return {base:base,prize:prize,bonus:prize,why:t.eff+'h of work'+(sk>1?', '+sk+' skills':'')+(un?', unblocks '+un:'')+(cr?', critical path':'')};
   });
@@ -950,7 +1115,8 @@ function renderQuests(){
 /* wallet: every account starts at zero and keeps its balance and quest progress */
 function wkey(){return 'crumb_wallet_'+U().s}
 function ensureWallet(){var k=U().s;if(state.walletFor===k)return;state.walletFor=k;state.coins=0;state.quests={};state.qm=null;
-  try{var w=JSON.parse(localStorage.getItem(wkey())||'null');if(w){state.coins=w.coins||0;state.quests=w.quests||{};state.qm=w.qm||null}}catch(e){}}
+  try{var w=JSON.parse(localStorage.getItem(wkey())||'null');if(w){state.coins=w.coins||0;state.quests=w.quests||{};state.qm=w.qm||null}}catch(e){}
+  if(!state.coins&&/[?&]rich=1/.test(location.search))state.coins=1500}
 function saveWallet(){try{localStorage.setItem(wkey(),JSON.stringify({coins:state.coins,quests:state.quests,qm:state.qm}))}catch(e){}}
 function render(){ensureWallet();syncMonth();renderSide();renderTop();$('#view').innerHTML=state.view==='board'?renderBoard():state.view==='upload'?renderUpload():state.view==='projects'?renderProjects2():state.view==='work'?renderWork():state.view==='quests'?renderQuests():renderProfile();saveWallet()}
 function ensureProj(){var k=U().s;if(state.projFor===k)return;state.projFor=k;state.projects=[];try{var v=JSON.parse(localStorage.getItem(pkey())||'null');if(v&&v.length)state.projects=v}catch(e){}}
@@ -996,10 +1162,11 @@ document.addEventListener('click',function(e){
   if(a==='node'){state.node=d.n;$('#ninfo').innerHTML=nodeInfo(d.n);var tr=$('.tree');tr.innerHTML=tree();var nn=tr.querySelector('[data-n="'+d.n.replace(/"/g,'\\"')+'"]');if(nn)nn.focus({preventScroll:true});return}
   if(a==='seg'){var k=d.k;state[k]=+d.v;var seg=el.parentElement;[].forEach.call(seg.children,function(b){b.setAttribute('aria-pressed',String(b===el))});refreshEcon();return}
   if(a==='sample'){state.brief=SAMPLE;$('#brief').value=SAMPLE;$('#cnt').textContent=SAMPLE.length+' characters';return}
+  if(a==='sample2'){state.brief=ROBONOVA_BRIEF;$('#brief').value=ROBONOVA_BRIEF;$('#cnt').textContent=ROBONOVA_BRIEF.length+' characters';return}
   if(a==='shred')return shred();
   if(a==='merge'){var i=+d.i,p=state.plan,x=p[i],y=p[i+1];if(!y)return;
     var nd=[];x.deps.concat(y.deps).forEach(function(q){if(q!==x.id&&q!==y.id&&nd.indexOf(q)<0)nd.push(q)});
-    var m=Object.assign({},x,{title:x.title+' + '+y.title.charAt(0).toLowerCase()+y.title.slice(1),deps:nd,eff:x.eff+y.eff,w:x.w+y.w,skills:x.skills.concat(y.skills.filter(function(s){return x.skills.indexOf(s)<0}))});
+    var m=Object.assign({},x,{title:x.title+' + '+y.title.charAt(0).toLowerCase()+y.title.slice(1),deps:nd,eff:x.eff+y.eff,w:x.w+y.w,criteria:(x.criteria||[]).concat(y.criteria||[]).slice(0,6),difficulty:x.difficulty?Math.max(x.difficulty,y.difficulty||0):0,desc:(x.desc||'')+(y.desc?' '+y.desc:''),skills:x.skills.concat(y.skills.filter(function(s){return x.skills.indexOf(s)<0}))});
     p.forEach(function(t){t.deps=t.deps.map(function(q){return q===y.id?x.id:q}).filter(function(q,j,arr){return arr.indexOf(q)===j&&q!==t.id})});
     p.splice(i,2,m);state.published=false;refreshPlan();return toast('Merged two tasks')}
   if(a==='del'){var j=+d.i,pl=state.plan,rm=pl[j];
@@ -1007,7 +1174,7 @@ document.addEventListener('click',function(e){
     pl.splice(j,1);state.published=false;refreshPlan();return toast('Task removed')}
   if(a==='publish'){
     var LV=[3,4,5,3,6,2,4,3],n=NOW,pname=projName(),pstamp=Date.now();
-    state.plan.forEach(function(t,i){TASKS.unshift({id:'n'+pstamp+i,project:pname,title:t.title,desc:'Posted from your brief. '+KIND[t.kind]+' work, about '+t.eff+' builder-hours.',kind:t.kind==='qa'?'qa':t.kind,skills:t.skills.map(function(s,q){return {n:s,lv:Math.min(LV[(i+q)%LV.length],MY[s]>0?MY[s]:LV[(i+q)%LV.length])}}),base:planCalc()[i].base,prize:planCalc()[i].prize,mult:Math.max(1,Math.round(planCalc()[i].prize/planCalc()[i].base)),claimed:0,max:state.maxB,left:state.sprint*3600,total:state.sprint*3600,endsAt:Date.now()+state.sprint*3600*1000,surge:0,unblocks:0,fresh:true,crit:!!analyse(state.plan).crit[i]})});
+    state.plan.forEach(function(t,i){TASKS.unshift({id:'n'+pstamp+i,project:pname,title:t.title,desc:shortDesc(t),full:t.desc||'',criteria:t.criteria||null,deliverables:t.deliverables||null,context:t.context||'',difficulty:t.difficulty||0,kind:t.kind==='qa'?'qa':t.kind,skills:t.skills.map(function(s,q){return {n:s,lv:Math.min(LV[(i+q)%LV.length],MY[s]>0?MY[s]:LV[(i+q)%LV.length])}}),base:planCalc()[i].base,prize:planCalc()[i].prize,mult:Math.max(1,Math.round(planCalc()[i].prize/planCalc()[i].base)),claimed:0,max:state.maxB,left:state.sprint*3600,total:state.sprint*3600,endsAt:Date.now()+state.sprint*3600*1000,surge:0,unblocks:0,fresh:true,crit:!!analyse(state.plan).crit[i]})});
     state.pool=prizeTotal();saveProject(pname,pstamp);state.coins-=state.pool;state.published=true;state.filter='all';state.sort='ending';
     toast(state.plan.length+' tasks are live. '+num(state.pool)+' crumbs are now held in escrow.');go('projects');return}
 });
