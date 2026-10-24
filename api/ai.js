@@ -2,7 +2,7 @@
 // Keeps the Gemini key on the server. The browser never sees it.
 const { AGENTS } = require('./_prompts');
 
-const MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+const MODEL = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
 const MAX_INPUT = 20000; // characters, keeps free quota safe
 
 // Pull JSON out of whatever the model returned (fences, extra text, etc.)
@@ -16,12 +16,18 @@ function extractJson(text) {
   throw new Error('no JSON found in model reply');
 }
 
-async function callGemini(system, userText, key) {
+// Thinking models can spend minutes "thinking". We cap it. Set GEMINI_THINKING=off to skip the cap,
+// or to minimal/low/medium/high to choose a level (default: low).
+const THINK = (process.env.GEMINI_THINKING || 'low').toLowerCase();
+
+async function callGemini(system, userText, key, withThinking) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
+  const generationConfig = { temperature: 0.2, responseMimeType: 'application/json' };
+  if (withThinking && THINK !== 'off') generationConfig.thinkingConfig = { thinkingLevel: THINK };
   const body = {
     systemInstruction: { parts: [{ text: system }] },
     contents: [{ role: 'user', parts: [{ text: userText }] }],
-    generationConfig: { temperature: 0.2, responseMimeType: 'application/json' },
+    generationConfig,
   };
   const r = await fetch(url, {
     method: 'POST',
@@ -29,13 +35,16 @@ async function callGemini(system, userText, key) {
     body: JSON.stringify(body),
   });
   if (!r.ok) {
-    const err = new Error('Gemini error ' + r.status + ': ' + (await r.text()).slice(0, 300));
+    const txt = await r.text();
+    // model rejected the thinking setting -> retry once without it
+    if (withThinking && r.status === 400 && /think/i.test(txt)) return callGemini(system, userText, key, false);
+    const err = new Error('Gemini error ' + r.status + ': ' + txt.slice(0, 300));
     err.status = r.status;
     throw err;
   }
   const data = await r.json();
   const parts = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts;
-  return parts ? parts.map(p => p.text || '').join('') : '';
+  return parts ? parts.filter(p => !p.thought).map(p => p.text || '').join('') : '';
 }
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -60,9 +69,10 @@ module.exports = async (req, res) => {
   // up to 3 tries: covers rate limits (429), server blips (5xx) and bad JSON
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      const text = await callGemini(def.system, userText, key);
+      const t0 = Date.now();
+      const text = await callGemini(def.system, userText, key, true);
       const json = extractJson(text);
-      return res.status(200).json({ ok: true, agent, data: json });
+      return res.status(200).json({ ok: true, agent, ms: Date.now() - t0, data: json });
     } catch (e) {
       lastErr = e;
       const retryable = !e.status || e.status === 429 || e.status >= 500;
